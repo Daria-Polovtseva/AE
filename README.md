@@ -81,6 +81,7 @@ A curated list of awesome resources, plugins, scripts, tutorials, and more for A
 - [BeatEdit](https://aescripts.com/beatedit-for-after-effects/) - Detects beats in audio tracks and generates markers or keyframes to sync animations to music.
 - [Move Anchor Point 4](https://aescripts.com/move-anchor-point/) - Repositions layer anchor points to any corner, edge midpoint, or center without shifting the layer's position in the composition.
 - [pt_OpenSesame](https://aescripts.com/pt_opensesame/) - Imports compositions and footage items from one After Effects project into another via a plain-text manifest file.
+- [Animation Composer](https://misterhorse.com/animation-composer) - Free panel for browsing and applying animation presets, transitions, titles, and sound effects with an integrated asset library.
 
 ## Plugins
 
@@ -108,12 +109,19 @@ A curated list of awesome resources, plugins, scripts, tutorials, and more for A
 - [AfterCodecs](https://www.autokroma.com/AfterCodecs) - Output module plugin for rendering H.264, ProRes, HAP, and HEVC files directly from the After Effects render queue without Media Encoder.
 - [ReelSmart Motion Blur](https://revisionfx.com/products/rsmb/) - Adds natural-looking motion blur to footage by automatically tracking per-pixel motion.
 - [FX Console](https://www.videocopilot.net/tutorials/fx_console_plugin) - Free quick-search command palette for applying effects, presets, and plugins without navigating menus.
+- [Plexus](https://www.rowbyte.com/plexus) - Procedural 3D particle system that renders points, lines, and triangles between particles with OBJ mesh import and sound reactivity.
+- [Continuum](https://borisfx.com/products/continuum/) - Suite of 300+ GPU-accelerated effects and transitions including Particle Illusion, Primatte Studio keying, and integrated Mocha planar tracking.
+- [TV Distortion Bundle](https://www.rowbyte.com/tv-distortion-bundle) - Collection of five plugins simulating analog and digital video artifacts including glitch, chromatic aberration, and pixel effects.
+- [Fast Bokeh Pro](https://www.rowbyte.com/fast-bokeh) - GPU-accelerated depth-of-field blur using depth maps with polygonal iris shapes and anamorphic bokeh support.
+- [Extrude](https://www.plugineverything.com/extrude) - Extrudes live text layers, shape layers, and mask paths into 3D with directional and camera-aware modes and GPU-accelerated shading.
+- [Digit Fiddler](https://www.plugineverything.com/digit-fiddler) - Animates counters, currency, time, and custom numeric sequences from a single slider with padding and monospacing controls.
 
 ## Software
 
  - [nexrender](https://www.nexrender.com) - 📹 Data-driven render automation for After Effects
  - [DataClay Templater](https://dataclay.com/templater/) - Simplifies and accelerates the process of creating customized videos.
  - [Anubis](https://www.battleaxe.co/anubis) - Render management panel for exporting MP4 from After Effects and Premiere with automatic file naming and folder organization.
+ - [Cavalry](https://cavalry.studio/) - Standalone procedural 2D animation software with data-driven workflows, real-time rendering, and spreadsheet integration, free for individuals.
 
 ## Tutorials
 
