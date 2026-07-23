@@ -114,8 +114,8 @@
         return [
             "// --- Pelmeshe4ek float rig ---",
             "var ctrl = thisComp.layer(\"EXPRESSION_CONTROLS\");",
-            "var spd  = ctrl.effect(\"" + speedName + "\")(\"Slider\");",
-            "var amt  = ctrl.effect(\"" + amountName + "\")(\"Slider\");",
+            "var spd  = ctrl.effect(\"" + speedName + "\")(1);",
+            "var amt  = ctrl.effect(\"" + amountName + "\")(1);",
             "var w = wiggle(spd, amt);",
             "// keep original Z so depth layout / DoF is not disturbed",
             "[w[0], w[1], value[2]];"
@@ -194,7 +194,9 @@
             // Parent camera to the controller, THEN set local transform (values are now null-relative).
             cam.parent = camNull;
             cam.property("ADBE Transform Group").property("ADBE Position").setValue([0, 0, -CONFIG.camDistance]);
-            cam.property("ADBE Transform Group").property("ADBE Pt of Interest").setValue([0, 0, 0]);
+            // NOTE: on camera/light layers the Point of Interest lives under the anchor-point
+            // matchName ("ADBE Anchor Point") — NOT "ADBE Pt of Interest" (which does not exist).
+            cam.property("ADBE Transform Group").property("ADBE Anchor Point").setValue([0, 0, 0]);
 
             // ------------------------------------------------------------------------------------
             //  4. Z-SPACE LAYERS (all 3D)
@@ -249,8 +251,9 @@
             adj.moveToBeginning();            // ensure it is the topmost layer
             adj.label = 9;                    // Green
             var glow = adj.property("ADBE Effect Parade").addProperty("ADBE Glo2"); // built-in Glow
-            glow.property("Glow Threshold").setValue(CONFIG.glowThreshold);
-            glow.property("Glow Radius").setValue(CONFIG.glowRadius);
+            // Address by property index (language-independent): 2 = Glow Threshold, 3 = Glow Radius.
+            glow.property(2).setValue(CONFIG.glowThreshold);
+            glow.property(3).setValue(CONFIG.glowRadius);
 
             // ------------------------------------------------------------------------------------
             //  6. DONE
