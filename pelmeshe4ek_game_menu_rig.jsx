@@ -57,13 +57,13 @@
         zBackground:   5000,   // deep, blurred background
         zBGDecor:      2000,   // mid-ground environment / decor
         zCharacter:       0,   // focal plane — perfect sharpness
-        zUI:           -500,   // interactive menu buttons (slight foreground blur)
-        zParticles:   -1200,   // foreground floating flour dust (heavy bokeh)
+        zUI:           -350,   // menu buttons (closer to Z=0 → less magnified, less blur, cleaner)
+        zParticles:    -800,   // foreground floating flour dust (heavy bokeh, kept on-screen)
 
-        // Post — Glow tuned so bright placeholders bloom softly instead of blowing out to white.
-        glowThreshold: 75,     // percent (higher = only the brightest edges glow)
-        glowRadius:    40,
-        glowIntensity: 0.65,
+        // Post — Glow kept subtle so fills keep their true colour (no orange->yellow blow-out).
+        glowThreshold: 85,     // percent (only the brightest edges glow)
+        glowRadius:    16,
+        glowIntensity: 0.30,
 
         // Label colour for the character placeholder (1..16). 11 = Orange — warm & distinct.
         characterLabel: 11
@@ -180,8 +180,8 @@
         lyr.name = name;
         var root = lyr.property("ADBE Root Vectors Group");
         var rect = root.addProperty("ADBE Vector Shape - Rect");
-        rect.property("ADBE Vector Rect Size").setValue([720, 190]);
-        rect.property("ADBE Vector Rect Roundness").setValue(45);
+        rect.property("ADBE Vector Rect Size").setValue([660, 168]);
+        rect.property("ADBE Vector Rect Roundness").setValue(38);
         var fill = root.addProperty("ADBE Vector Graphic - Fill");
         setFillColor(fill.property("ADBE Vector Fill Color"), color);
         lyr.threeDLayer = true;
@@ -192,37 +192,41 @@
         var txt = targetComp.layers.addText(labelText);
         txt.name = name + " Label";
         txt.threeDLayer = true;
-        styleText(txt, 76, [1, 1, 1]);
+        styleText(txt, 64, [1, 1, 1]);
         txt.parent = lyr; // rides the button's wiggle
         // Local offset: centre vertically on the plate and nudge 1px toward camera to avoid z-fighting.
-        txt.property("ADBE Transform Group").property("ADBE Position").setValue([0, 26, -1]);
+        txt.property("ADBE Transform Group").property("ADBE Position").setValue([0, 22, -1]);
         return lyr;
     }
 
-    /** Fills the character pre-comp with a pedestal + a clear "drop your character here" label. */
+    /** Fills the character pre-comp with a label + a small pedestal, kept in the upper zone
+     *  (above where the menu buttons land) so nothing overlaps the UI. */
     function fillCharacterPrecomp(item) {
         var w = CONFIG.width, h = CONFIG.height;
-        addEllipseShape(item, "Pedestal", 540, 130, [0.85, 0.50, 0.18], w / 2, h * 0.64);
         var txt = item.layers.addText("INSERT\rCHARACTER\rHERE");
         txt.name = "Placeholder Label";
-        styleText(txt, 88, [0.96, 0.78, 0.45]);
-        txt.property("ADBE Transform Group").property("ADBE Position").setValue([w / 2, h * 0.42]);
+        styleText(txt, 72, [0.96, 0.78, 0.45]);
+        txt.property("ADBE Transform Group").property("ADBE Position").setValue([w / 2, h * 0.30]);
+        addEllipseShape(item, "Pedestal", 420, 96, [0.85, 0.50, 0.18], w / 2, h * 0.45);
     }
 
-    /** Scatters a few soft cream "dumpling" blobs into the BG_Decor pre-comp. */
+    /** Scatters a few soft cream "dumpling" blobs into the BG_Decor pre-comp (kept below the
+     *  Glow threshold so they stay soft instead of blowing out to white). */
     function fillDecorPrecomp(item) {
-        var w = CONFIG.width, h = CONFIG.height, cream = [0.90, 0.82, 0.63];
-        addEllipseShape(item, "Decor_1", 260, 220, cream, w * 0.22, h * 0.30);
-        addEllipseShape(item, "Decor_2", 300, 250, cream, w * 0.78, h * 0.24);
-        addEllipseShape(item, "Decor_3", 220, 190, cream, w * 0.82, h * 0.62);
-        addEllipseShape(item, "Decor_4", 240, 200, cream, w * 0.18, h * 0.66);
+        var w = CONFIG.width, h = CONFIG.height, cream = [0.78, 0.70, 0.52];
+        addEllipseShape(item, "Decor_1", 260, 220, cream, w * 0.20, h * 0.28);
+        addEllipseShape(item, "Decor_2", 300, 250, cream, w * 0.80, h * 0.22);
+        addEllipseShape(item, "Decor_3", 220, 190, cream, w * 0.84, h * 0.60);
+        addEllipseShape(item, "Decor_4", 240, 200, cream, w * 0.16, h * 0.64);
     }
 
-    /** Scatters glowing gold "flour dust" dots into the FG_Particles pre-comp. */
+    /** Scatters soft gold "flour dust" dots into the FG_Particles pre-comp, hugging the edges so
+     *  they don't sit on top of the UI labels. Dimmed below the Glow threshold (no white blobs). */
     function fillParticlesPrecomp(item) {
-        var w = CONFIG.width, h = CONFIG.height, gold = [1, 0.90, 0.68];
-        var pts = [[0.10, 0.20, 90], [0.86, 0.35, 70], [0.24, 0.80, 120], [0.66, 0.86, 90],
-                   [0.50, 0.28, 60], [0.78, 0.66, 110], [0.16, 0.52, 70], [0.42, 0.60, 50]];
+        var w = CONFIG.width, h = CONFIG.height, gold = [0.75, 0.64, 0.40];
+        // Upper-centre band: after camera magnification these stay on-screen and float above the menu.
+        var pts = [[0.32, 0.20, 60], [0.68, 0.18, 52], [0.46, 0.30, 44], [0.60, 0.34, 50],
+                   [0.30, 0.36, 54], [0.72, 0.30, 46]];
         for (var i = 0; i < pts.length; i++) {
             addEllipseShape(item, "Dust_" + (i + 1), pts[i][2], pts[i][2], gold,
                             w * pts[i][0], h * pts[i][1]);
@@ -316,9 +320,9 @@
 
             // 4d. UI buttons — rounded shape-layer plates with text labels, all floating.
             var uiButtons = [
-                { name: "Play Button",    label: "PLAY",     color: [0.95, 0.45, 0.12], y: CONFIG.height * 0.56 },
-                { name: "Outfits Button", label: "OUTFITS",  color: [0.16, 0.66, 0.80], y: CONFIG.height * 0.69 },
-                { name: "Settings",       label: "SETTINGS", color: [0.62, 0.30, 0.82], y: CONFIG.height * 0.82 }
+                { name: "Play Button",    label: "PLAY",     color: [0.95, 0.45, 0.12], y: CONFIG.height * 0.57 },
+                { name: "Outfits Button", label: "OUTFITS",  color: [0.16, 0.66, 0.80], y: CONFIG.height * 0.70 },
+                { name: "Settings",       label: "SETTINGS", color: [0.62, 0.30, 0.82], y: CONFIG.height * 0.83 }
             ];
             for (var b = 0; b < uiButtons.length; b++) {
                 var def = uiButtons[b];
