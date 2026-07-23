@@ -15,7 +15,9 @@
  *    - EXPRESSION_CONTROLS null with "Float Speed" (0.5) & "Float Amount" (30) sliders.
  *    - Full Z-space layout (BG solid, BG_Decor, character placeholder, 3 UI buttons, particles).
  *    - Global wiggle expressions linked to the control null (Z-depth preserved for clean parallax).
- *    - "Global Glow & Color" adjustment layer with built-in Glow (threshold 60%, radius 100).
+ *    - "Global Glow & Color" adjustment layer with a softly-tuned built-in Glow.
+ *    - Placeholders ship with visible stand-in art (pedestal + label, decor blobs, dust dots,
+ *      rounded UI plates with text) so the built scene reads immediately — swap them for your own.
  *    - Graceful duplicate-name handling and a friendly completion alert.
  *
  *  Uses ONLY built-in After Effects effects. No third-party plugins required.
@@ -58,9 +60,10 @@
         zUI:           -500,   // interactive menu buttons (slight foreground blur)
         zParticles:   -1200,   // foreground floating flour dust (heavy bokeh)
 
-        // Post
-        glowThreshold: 60,     // percent
-        glowRadius:    100,
+        // Post — Glow tuned so bright placeholders bloom softly instead of blowing out to white.
+        glowThreshold: 75,     // percent (higher = only the brightest edges glow)
+        glowRadius:    40,
+        glowIntensity: 0.65,
 
         // Label colour for the character placeholder (1..16). 11 = Orange — warm & distinct.
         characterLabel: 11
@@ -138,6 +141,94 @@
         layer.property("ADBE Transform Group").property("ADBE Position").setValue([x, y, z]);
     }
 
+    /** Sets a shape Fill colour, tolerating both 3- and 4-channel colour properties across versions. */
+    function setFillColor(fillColorProp, c) {
+        try { fillColorProp.setValue([c[0], c[1], c[2], 1]); }
+        catch (e) { try { fillColorProp.setValue([c[0], c[1], c[2]]); } catch (e2) {} }
+    }
+
+    /** Adds a filled ellipse shape layer to any comp at [x, y] (2D). Returns the layer. */
+    function addEllipseShape(targetComp, name, w, h, color, x, y) {
+        var lyr = targetComp.layers.addShape();
+        lyr.name = name;
+        var root = lyr.property("ADBE Root Vectors Group");
+        var ell = root.addProperty("ADBE Vector Shape - Ellipse");
+        ell.property("ADBE Vector Ellipse Size").setValue([w, h]);
+        var fill = root.addProperty("ADBE Vector Graphic - Fill");
+        setFillColor(fill.property("ADBE Vector Fill Color"), color);
+        lyr.property("ADBE Transform Group").property("ADBE Position").setValue([x, y]);
+        return lyr;
+    }
+
+    /** Styles a text layer's TextDocument (size, colour, centre justification). */
+    function styleText(textLayer, size, color) {
+        var tdProp = textLayer.property("ADBE Text Properties").property("ADBE Text Document");
+        var doc = tdProp.value;
+        doc.fontSize = size;
+        doc.applyFill = true;
+        doc.fillColor = color;
+        doc.justification = ParagraphJustification.CENTER_JUSTIFY;
+        tdProp.setValue(doc);
+    }
+
+    /**
+     * Creates a rounded-rectangle UI button (shape layer) with a centred text label parented to it,
+     * placed in 3D at [x, y, z] and driven by the global float rig.
+     */
+    function addRoundedButton(targetComp, name, labelText, color, x, y, z) {
+        var lyr = targetComp.layers.addShape();
+        lyr.name = name;
+        var root = lyr.property("ADBE Root Vectors Group");
+        var rect = root.addProperty("ADBE Vector Shape - Rect");
+        rect.property("ADBE Vector Rect Size").setValue([720, 190]);
+        rect.property("ADBE Vector Rect Roundness").setValue(45);
+        var fill = root.addProperty("ADBE Vector Graphic - Fill");
+        setFillColor(fill.property("ADBE Vector Fill Color"), color);
+        lyr.threeDLayer = true;
+        lyr.property("ADBE Transform Group").property("ADBE Position").setValue([x, y, z]);
+        lyr.label = 6; // Peach
+        applyFloat(lyr);
+
+        var txt = targetComp.layers.addText(labelText);
+        txt.name = name + " Label";
+        txt.threeDLayer = true;
+        styleText(txt, 76, [1, 1, 1]);
+        txt.parent = lyr; // rides the button's wiggle
+        // Local offset: centre vertically on the plate and nudge 1px toward camera to avoid z-fighting.
+        txt.property("ADBE Transform Group").property("ADBE Position").setValue([0, 26, -1]);
+        return lyr;
+    }
+
+    /** Fills the character pre-comp with a pedestal + a clear "drop your character here" label. */
+    function fillCharacterPrecomp(item) {
+        var w = CONFIG.width, h = CONFIG.height;
+        addEllipseShape(item, "Pedestal", 540, 130, [0.85, 0.50, 0.18], w / 2, h * 0.64);
+        var txt = item.layers.addText("INSERT\rCHARACTER\rHERE");
+        txt.name = "Placeholder Label";
+        styleText(txt, 88, [0.96, 0.78, 0.45]);
+        txt.property("ADBE Transform Group").property("ADBE Position").setValue([w / 2, h * 0.42]);
+    }
+
+    /** Scatters a few soft cream "dumpling" blobs into the BG_Decor pre-comp. */
+    function fillDecorPrecomp(item) {
+        var w = CONFIG.width, h = CONFIG.height, cream = [0.90, 0.82, 0.63];
+        addEllipseShape(item, "Decor_1", 260, 220, cream, w * 0.22, h * 0.30);
+        addEllipseShape(item, "Decor_2", 300, 250, cream, w * 0.78, h * 0.24);
+        addEllipseShape(item, "Decor_3", 220, 190, cream, w * 0.82, h * 0.62);
+        addEllipseShape(item, "Decor_4", 240, 200, cream, w * 0.18, h * 0.66);
+    }
+
+    /** Scatters glowing gold "flour dust" dots into the FG_Particles pre-comp. */
+    function fillParticlesPrecomp(item) {
+        var w = CONFIG.width, h = CONFIG.height, gold = [1, 0.90, 0.68];
+        var pts = [[0.10, 0.20, 90], [0.86, 0.35, 70], [0.24, 0.80, 120], [0.66, 0.86, 90],
+                   [0.50, 0.28, 60], [0.78, 0.66, 110], [0.16, 0.52, 70], [0.42, 0.60, 50]];
+        for (var i = 0; i < pts.length; i++) {
+            addEllipseShape(item, "Dust_" + (i + 1), pts[i][2], pts[i][2], gold,
+                            w * pts[i][0], h * pts[i][1]);
+        }
+    }
+
     // ============================================================================================
     //  MAIN BUILD ROUTINE
     // ============================================================================================
@@ -210,34 +301,34 @@
 
             // 4b. Environment / decor pre-comp (mid-ground) — slow, wide drift.
             var bgDecorItem = createPrecomp("BG_Decor");
+            fillDecorPrecomp(bgDecorItem); // visible placeholder dumpling blobs
             var bgDecor = comp.layers.add(bgDecorItem);
             place3D(bgDecor, cx, cy, CONFIG.zBGDecor);
             applyFloat(bgDecor, "BG Float Speed", "BG Float Amount");
 
             // 4c. Character placeholder pre-comp (focal plane) with distinct label colour + float.
             var charItem = createPrecomp("INSERT_CHARACTER_HERE");
+            fillCharacterPrecomp(charItem); // pedestal + "insert your character" label
             var charLayer = comp.layers.add(charItem);
             place3D(charLayer, cx, cy, CONFIG.zCharacter);
             charLayer.label = CONFIG.characterLabel;
             applyFloat(charLayer); // gentle idle bob linked to global controls
 
-            // 4d. UI buttons — three rectangular solids acting as placeholders, all floating.
+            // 4d. UI buttons — rounded shape-layer plates with text labels, all floating.
             var uiButtons = [
-                { name: "Play Button",    color: [0.95, 0.55, 0.15], y: CONFIG.height * 0.55 },
-                { name: "Outfits Button", color: [0.20, 0.75, 0.85], y: CONFIG.height * 0.68 },
-                { name: "Settings",       color: [0.75, 0.35, 0.85], y: CONFIG.height * 0.81 }
+                { name: "Play Button",    label: "PLAY",     color: [0.95, 0.45, 0.12], y: CONFIG.height * 0.56 },
+                { name: "Outfits Button", label: "OUTFITS",  color: [0.16, 0.66, 0.80], y: CONFIG.height * 0.69 },
+                { name: "Settings",       label: "SETTINGS", color: [0.62, 0.30, 0.82], y: CONFIG.height * 0.82 }
             ];
             for (var b = 0; b < uiButtons.length; b++) {
                 var def = uiButtons[b];
-                var btn = comp.layers.addSolid(def.color, def.name, 720, 200, CONFIG.pixelAspect);
-                place3D(btn, cx, def.y, CONFIG.zUI);
-                btn.label = 6; // Peach
-                applyFloat(btn);
+                addRoundedButton(comp, def.name, def.label, def.color, cx, def.y, CONFIG.zUI);
             }
 
             // 4e. Foreground particle placeholder pre-comp (floating flour dust — heavy bokeh).
             //      Livelier sway on its own controls so the near plane feels alive.
             var particlesItem = createPrecomp("FG_Particles");
+            fillParticlesPrecomp(particlesItem); // glowing gold dust dots
             var particles = comp.layers.add(particlesItem);
             place3D(particles, cx, cy, CONFIG.zParticles);
             applyFloat(particles, "Dust Float Speed", "Dust Float Amount");
@@ -251,9 +342,10 @@
             adj.moveToBeginning();            // ensure it is the topmost layer
             adj.label = 9;                    // Green
             var glow = adj.property("ADBE Effect Parade").addProperty("ADBE Glo2"); // built-in Glow
-            // Address by property index (language-independent): 2 = Glow Threshold, 3 = Glow Radius.
+            // Address by property index (language-independent): 2 = Threshold, 3 = Radius, 4 = Intensity.
             glow.property(2).setValue(CONFIG.glowThreshold);
             glow.property(3).setValue(CONFIG.glowRadius);
+            try { glow.property(4).setValue(CONFIG.glowIntensity); } catch (e) { /* older Glow */ }
 
             // ------------------------------------------------------------------------------------
             //  6. DONE
