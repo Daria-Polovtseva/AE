@@ -42,9 +42,14 @@
         camBlurLevel:   100,   // percent
         camDistance:    2000,  // camera pushed to -Z; also used as focus distance (focus on Z=0)
 
-        // Global float controllers (defaults)
-        floatSpeed:  0.5,
+        // Float controllers (defaults) — one pair per depth band so motion reads
+        // naturally by distance. All live on EXPRESSION_CONTROLS and stay user-tunable.
+        floatSpeed:  0.5,  // character + UI buttons (interactive foreground)
         floatAmount: 30,
+        bgFloatSpeed:   0.2,  // BG_Decor — slow, wide, dreamy drift (far plane)
+        bgFloatAmount:  45,
+        dustFloatSpeed:  0.9, // FG_Particles — livelier, larger sway (near plane)
+        dustFloatAmount: 70,
 
         // Z-space depth map (world Z of each plane)
         zBackground:   5000,   // deep, blurred background
@@ -102,24 +107,29 @@
 
     /**
      * Builds the wiggle expression string that drives organic float.
-     * Reads BOTH global sliders from EXPRESSION_CONTROLS and preserves the layer's own Z value
-     * so parallax depth and Depth-of-Field focus stay perfectly intact.
+     * Reads a named pair of sliders from EXPRESSION_CONTROLS (so each depth band can float on its
+     * own settings) and preserves the layer's own Z value so parallax + Depth-of-Field stay intact.
      */
-    function buildFloatExpression() {
+    function buildFloatExpression(speedName, amountName) {
         return [
-            "// --- Pelmeshe4ek global float rig ---",
+            "// --- Pelmeshe4ek float rig ---",
             "var ctrl = thisComp.layer(\"EXPRESSION_CONTROLS\");",
-            "var spd  = ctrl.effect(\"Float Speed\")(\"Slider\");",
-            "var amt  = ctrl.effect(\"Float Amount\")(\"Slider\");",
+            "var spd  = ctrl.effect(\"" + speedName + "\")(\"Slider\");",
+            "var amt  = ctrl.effect(\"" + amountName + "\")(\"Slider\");",
             "var w = wiggle(spd, amt);",
             "// keep original Z so depth layout / DoF is not disturbed",
             "[w[0], w[1], value[2]];"
         ].join("\r");
     }
 
-    /** Applies the float expression to a 3D layer's Position. */
-    function applyFloat(layer) {
-        layer.property("ADBE Transform Group").property("ADBE Position").expression = buildFloatExpression();
+    /**
+     * Applies the float expression to a 3D layer's Position.
+     * Defaults to the "Float Speed"/"Float Amount" controls; pass other slider names to drive a
+     * layer from a different depth band's controls.
+     */
+    function applyFloat(layer, speedName, amountName) {
+        layer.property("ADBE Transform Group").property("ADBE Position").expression =
+            buildFloatExpression(speedName || "Float Speed", amountName || "Float Amount");
     }
 
     /** Convenience: force a layer 3D and set its 3D position. */
@@ -156,8 +166,12 @@
             var ctrlNull = comp.layers.addNull();
             ctrlNull.name = "EXPRESSION_CONTROLS";
             ctrlNull.label = 5; // Lavender — reads as a "control" layer
-            addSlider(ctrlNull, "Float Speed",  CONFIG.floatSpeed);
-            addSlider(ctrlNull, "Float Amount", CONFIG.floatAmount);
+            addSlider(ctrlNull, "Float Speed",      CONFIG.floatSpeed);   // character + UI
+            addSlider(ctrlNull, "Float Amount",     CONFIG.floatAmount);
+            addSlider(ctrlNull, "BG Float Speed",   CONFIG.bgFloatSpeed);  // BG_Decor
+            addSlider(ctrlNull, "BG Float Amount",  CONFIG.bgFloatAmount);
+            addSlider(ctrlNull, "Dust Float Speed", CONFIG.dustFloatSpeed); // FG_Particles
+            addSlider(ctrlNull, "Dust Float Amount",CONFIG.dustFloatAmount);
 
             // ------------------------------------------------------------------------------------
             //  3. CAMERA RIG — a 3D camera parented to a controller null.
@@ -192,10 +206,11 @@
             place3D(bg, cx, cy, CONFIG.zBackground);
             bg.property("ADBE Transform Group").property("ADBE Scale").setValue([500, 500, 500]);
 
-            // 4b. Environment / decor pre-comp (mid-ground).
+            // 4b. Environment / decor pre-comp (mid-ground) — slow, wide drift.
             var bgDecorItem = createPrecomp("BG_Decor");
             var bgDecor = comp.layers.add(bgDecorItem);
             place3D(bgDecor, cx, cy, CONFIG.zBGDecor);
+            applyFloat(bgDecor, "BG Float Speed", "BG Float Amount");
 
             // 4c. Character placeholder pre-comp (focal plane) with distinct label colour + float.
             var charItem = createPrecomp("INSERT_CHARACTER_HERE");
@@ -219,9 +234,11 @@
             }
 
             // 4e. Foreground particle placeholder pre-comp (floating flour dust — heavy bokeh).
+            //      Livelier sway on its own controls so the near plane feels alive.
             var particlesItem = createPrecomp("FG_Particles");
             var particles = comp.layers.add(particlesItem);
             place3D(particles, cx, cy, CONFIG.zParticles);
+            applyFloat(particles, "Dust Float Speed", "Dust Float Amount");
 
             // ------------------------------------------------------------------------------------
             //  5. POST — adjustment layer at the very top with built-in Glow.
