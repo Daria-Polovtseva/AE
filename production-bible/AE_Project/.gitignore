@@ -1,0 +1,17 @@
+# Generated deliverable (built locally / at packaging stage)
+dist/FINAL_PROJECT.jsx
+
+# Character / texture art (binary, supplied per-project — see assets/README.md)
+assets/*.png
+assets/*.psd
+assets/*.ai
+assets/*.jpg
+
+# AE + OS cruft
+*.aep
+*.aep.lock
+.DS_Store
+Thumbs.db
+
+# temp build/check artifacts
+*.tmp

@@ -1,0 +1,63 @@
+/**
+ * core/guards — safe DOM wrappers so the build never hard-fails on one fragile call.
+ * Load order: 40. Depends on: core/namespace, core/logger.
+ *
+ * A generator must degrade gracefully: an unknown effect/parameter/plugin should log a warning
+ * and continue, never abort the whole build. Every setValue / expression / effect-parameter
+ * assignment in the feature modules goes through here. [Bible §20 R8, §22.6]
+ */
+(function (SR) {
+    var Guard = {
+        /** setValue with try/catch; returns success. */
+        set: function (prop, value) {
+            try {
+                if (prop && prop.setValue) { prop.setValue(value); return true; }
+            } catch (e) { SR.Logger.warn("setValue failed: " + e.toString()); }
+            return false;
+        },
+
+        /** Assign an expression string with try/catch; returns success. */
+        expr: function (prop, exprStr) {
+            try {
+                if (prop) { prop.expression = exprStr; return true; }
+            } catch (e) { SR.Logger.warn("expression failed: " + e.toString()); }
+            return false;
+        },
+
+        /**
+         * Set an effect parameter by property name (or 1-based index), tolerant of locale/name drift.
+         * @param {Property} effect
+         * @param {string|number} nameOrIndex
+         * @param {*} value
+         */
+        param: function (effect, nameOrIndex, value) {
+            if (!effect) { return false; }
+            var p = null;
+            try { p = effect.property(nameOrIndex); } catch (e) { p = null; }
+            return this.set(p, value);
+        },
+
+        /** Assign an expression to an effect parameter by name/index. */
+        exprParam: function (effect, nameOrIndex, exprStr) {
+            if (!effect) { return false; }
+            var p = null;
+            try { p = effect.property(nameOrIndex); } catch (e) { p = null; }
+            return this.expr(p, exprStr);
+        },
+
+        /** Add an effect by match-name; returns the effect or null (logs on failure). */
+        addEffect: function (layer, matchName) {
+            try { return layer.property("ADBE Effect Parade").addProperty(matchName); }
+            catch (e) { SR.Logger.warn("effect '" + matchName + "' not addable: " + e.toString()); return null; }
+        },
+
+        /** Run fn in try/catch; on failure log a labelled warning and return fallback. */
+        attempt: function (label, fn, fallback) {
+            try { return fn(); }
+            catch (e) { SR.Logger.warn(label + ": " + e.toString()); return fallback; }
+        }
+    };
+
+    SR.Guard = Guard;
+    SR.registerModule("core/guards");
+})($.global.SR);

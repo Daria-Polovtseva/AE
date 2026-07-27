@@ -1,0 +1,15 @@
+{
+  "name": "Starlight Reverie",
+  "version": "2.0.0",
+  "target": "Adobe After Effects 2026",
+  "output": "dist/FINAL_PROJECT.jsx",
+  "comment": "Authoritative module load order. tools/build.js concatenates these in sequence. New stages append their modules here. 'main' is added last at packaging (Stage 21).",
+  "modules": [
+    "src/core/00_namespace.jsxinc",
+    "src/core/10_config.jsxinc",
+    "src/core/20_logger.jsxinc",
+    "src/core/30_random.jsxinc",
+    "src/core/40_guards.jsxinc",
+    "src/core/50_env.jsxinc"
+  ]
+}

@@ -1,0 +1,59 @@
+/**
+ * core/logger — levelled logger with an in-memory buffer, file writer and summary counts.
+ * Load order: 20. Depends on: core/namespace.
+ *
+ * Used by every module so the build produces a single reviewable log + summary dialog
+ * instead of scattered alerts. Warnings/errors are counted for the validation gate. [Bible §22]
+ */
+(function (SR) {
+    var Logger = {
+        lines: [],
+        warnCount: 0,
+        errorCount: 0,
+        _t0: null,
+
+        /** Begin a fresh build log. */
+        start: function () {
+            this.lines = [];
+            this.warnCount = 0;
+            this.errorCount = 0;
+            this._t0 = new Date().getTime();
+            this.info("=== " + SR.NAME + " v" + SR.VERSION + " — build start ===");
+        },
+
+        info:  function (m) { this.lines.push("    " + m);           this._out("[SR] " + m); },
+        warn:  function (m) { this.warnCount++;  this.lines.push("    ! WARN:  " + m); this._out("[SR][WARN] " + m); },
+        error: function (m) { this.errorCount++; this.lines.push("    X ERROR: " + m); this._out("[SR][ERROR] " + m); },
+
+        /** Seconds since start(). */
+        elapsed: function () { return this._t0 ? ((new Date().getTime() - this._t0) / 1000) : 0; },
+
+        _out: function (s) { try { $.writeln(s); } catch (e) {} },
+
+        /** Full log text including the plugin report if present. */
+        toText: function () {
+            var t = SR.NAME + " — build log\n" + (new Date()).toString() + "\n\n";
+            if (SR.plugins && SR.plugins.report && SR.plugins.report.length) {
+                t += "PLUGIN REPORT:\n";
+                for (var i = 0; i < SR.plugins.report.length; i++) { t += "    " + SR.plugins.report[i] + "\n"; }
+                t += "\n";
+            }
+            t += "LOG:\n" + this.lines.join("\n") + "\n\n";
+            t += "Warnings: " + this.warnCount + "   Errors: " + this.errorCount + "\n";
+            return t;
+        },
+
+        /** Write the log to a text file; returns success. Defaults to the OS temp folder. */
+        writeFile: function (fsPath) {
+            try {
+                var p = fsPath || (Folder.temp.fsName + "/Starlight_Reverie_build_log.txt");
+                var f = new File(p);
+                f.open("w"); f.write(this.toText()); f.close();
+                return p;
+            } catch (e) { return null; }
+        }
+    };
+
+    SR.Logger = Logger;
+    SR.registerModule("core/logger");
+})($.global.SR);

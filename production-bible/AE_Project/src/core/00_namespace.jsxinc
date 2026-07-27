@@ -1,0 +1,68 @@
+/**
+ * core/namespace — the single global namespace + module registry.
+ * Load order: 00 (first). Depends on: nothing.
+ *
+ * ExtendScript has no module system; every module attaches its API to this shared
+ * `SR` object on $.global. Works identically whether modules are #included in dev
+ * or concatenated into dist/FINAL_PROJECT.jsx by tools/build.js. [Bible §13.2]
+ */
+(function () {
+    // Resolve the global object in AE (via $.global) or a plain host (node --check parse).
+    var g = (typeof $ !== "undefined" && $.global) ? $.global : (typeof window !== "undefined" ? window : this);
+    if (!g.SR) { g.SR = {}; }
+    var SR = g.SR;
+
+    SR.NAME         = "Starlight Reverie";
+    SR.CODENAME     = "REVERIE";
+    SR.VERSION      = "2.0.0";
+    SR.BUILD_TARGET = "Adobe After Effects 2026 (26.x)";
+    SR.BIBLE        = "production-bible/PRODUCTION-BIBLE.md (v1.0)";
+
+    /** Ordered list of loaded module ids (used by the validator to report the surface). */
+    SR.modules = SR.modules || [];
+
+    /**
+     * Register a loaded module id (idempotent).
+     * @param {string} id e.g. "core/logger"
+     */
+    SR.registerModule = function (id) {
+        for (var i = 0; i < SR.modules.length; i++) {
+            if (SR.modules[i] === id) { return; }
+        }
+        SR.modules.push(id);
+    };
+
+    /**
+     * Dependency guard: true when a dotted API path is attached, e.g. SR.has("Logger")
+     * or SR.has("util.comp"). Feature modules call this to fail fast with a clear message
+     * instead of a cryptic null-reference deep in the build.
+     * @param {string} dotted
+     * @returns {boolean}
+     */
+    SR.has = function (dotted) {
+        var parts = ("" + dotted).split("."), node = SR;
+        for (var i = 0; i < parts.length; i++) {
+            if (node == null || node[parts[i]] == null) { return false; }
+            node = node[parts[i]];
+        }
+        return true;
+    };
+
+    /**
+     * Require one or more dotted API paths; throws a single descriptive error if any is
+     * missing. Keeps the load-order contract explicit and self-documenting.
+     * @param {...string} paths
+     */
+    SR.require = function () {
+        var missing = [];
+        for (var i = 0; i < arguments.length; i++) {
+            if (!SR.has(arguments[i])) { missing.push(arguments[i]); }
+        }
+        if (missing.length) {
+            throw new Error("[SR] missing dependencies: " + missing.join(", ") +
+                            " (check build/manifest.json load order)");
+        }
+    };
+
+    SR.registerModule("core/namespace");
+})();

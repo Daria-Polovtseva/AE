@@ -1,0 +1,87 @@
+/**
+ * core/config — single source of truth for all data. No magic numbers live anywhere else.
+ * Load order: 10. Depends on: core/namespace.
+ *
+ * Values mirror the approved Production Bible (§1.2 specs, §5 palette, §8 motion, §9.2 planes,
+ * §7 camera) and match the validated reference monolith exactly. An artist can override any
+ * field before SR.build() (see examples/) for reskins / reformats without touching code.
+ */
+(function (SR) {
+    SR.config = {
+        project: {
+            name: "Starlight_Reverie",
+            prefix: "SR",                    // namespace tag for restart-safety
+            rebuildClean: true,              // remove a prior build of this project before rebuilding
+            bitsPerChannel: 32,              // 32-bit float linear working space [Bible §1.2]
+            linearize: true,
+            expressionEngine: "javascript-1.0"
+        },
+
+        comp: {
+            width: 1920, height: 1080, pixelAspect: 1.0,
+            fps: 30, durationSec: 10,        // 300-frame seamless loop [Bible §1.2, §8.4]
+            bgOversizePct: 120,              // background oversized so camera push never reveals edges
+            motionBlur: true, shutterAngle: 180, shutterPhase: -90,
+            mbSamples: 16, mbAdaptiveLimit: 32
+        },
+
+        // Palette (sRGB hex reference; project works in 32-bit linear) [Bible §5.1]
+        palette: {
+            BG_Deep:       "#160726",
+            BG_Mid:        "#3A1B63",
+            BG_Glow:       "#5B2E8C",
+            Pink_Hot:      "#FF4DA6",
+            Pink_Light:    "#FF9AD1",
+            Pink_Pale:     "#FFD6EC",
+            Magenta_Deep:  "#C21E7A",
+            Star_Cream:    "#FFF3C4",
+            Yellow:        "#FFD24A",
+            Teal:          "#4FE6C4",
+            Lavender:      "#C9B3FF",
+            White:         "#FFFFFF"
+        },
+
+        // 7-plane parallax depth stack [Bible §9.2]. `factor` drives the expression-based
+        // 2.5D parallax (full-frame coverage preserved); z used for the hero focus reference.
+        planes: [
+            { name: "NULL_Plane_Far",        z: 2400,  factor: 0.25 },
+            { name: "NULL_Plane_MidFar",     z: 1400,  factor: 0.45 },
+            { name: "NULL_Plane_Mid",        z: 700,   factor: 0.70 },
+            { name: "NULL_Plane_Hero",       z: 0,     factor: 1.00 },
+            { name: "NULL_Plane_NearMid",    z: -400,  factor: 1.30 },
+            { name: "NULL_Plane_Near",       z: -900,  factor: 1.70 },
+            { name: "NULL_Plane_Foreground", z: -1400, factor: 2.20 }
+        ],
+
+        // Decoration counts [Bible §4 S07..S12]
+        counts: {
+            daisies: 9,
+            heartsNear: 3, heartsMid: 4, heartsSmall: 5,
+            stars: 15,
+            sparkles: 24,
+            bokehNear: 6, bokehFar: 8,
+            orbs: 3
+        },
+
+        camera: {
+            zoomPx: 1900,                    // ~40mm-equivalent; also camera pull-back so planes stay in front [Bible §7.2]
+            driftAmpX: 6, driftAmpY: 4, pushZ: 26,
+            // loop-safe: X=5s (2 cycles), Y=10/3s (3 cycles), Z=10s (1 cycle) -> organic yet seamless
+            driftPeriodX: 5, driftPeriodY: (10 / 3), driftPeriodZ: 10,
+            dofAmount: 30
+        },
+
+        // Default controller values (mirrored onto CTRL_Global / CTRL_Camera at Stage 6)
+        controls: {
+            masterGlow: 100, driftSpeed: 1.0, amplitude: 100,
+            density: 100, parallaxDepth: 100, previewMode: 0, format: 0
+        },
+
+        seed: 20260723                       // deterministic build seed [Bible §16.2]
+    };
+
+    /** The exact master comp name, derived from config, used by expressions via comp("..."). */
+    SR.config.masterName = "MASTER_" + SR.config.project.name + "_1080p";
+
+    SR.registerModule("core/config");
+})($.global.SR);

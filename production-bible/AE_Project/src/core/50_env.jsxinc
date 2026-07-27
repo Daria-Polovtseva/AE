@@ -1,0 +1,64 @@
+/**
+ * core/env — host environment gate + project bootstrap + undo-group wrapper.
+ * Load order: 50 (last in core). Depends on: core/namespace, core/config, core/logger, core/guards.
+ *
+ * Centralizes everything that touches the host application / project so feature modules stay
+ * pure builders. Idempotent and restart-safe. [Bible §1.2, §18.2]
+ */
+(function (SR) {
+    var Env = {
+        /** Parsed major AE version (e.g. 26), or 0 if unavailable. */
+        majorVersion: function () {
+            try {
+                var m = ("" + app.version).match(/^(\d+)/);
+                return m ? parseInt(m[1], 10) : 0;
+            } catch (e) { return 0; }
+        },
+
+        /** Warn (do not fail) if the host is older than the design target. */
+        checkVersion: function () {
+            var v = this.majorVersion();
+            if (v && v < 26) {
+                SR.Logger.warn("Host is AE major " + v + "; design target is 2026 (26.x). " +
+                               "Advanced-3D / newer options may be unavailable — the build will still run.");
+            } else if (v) {
+                SR.Logger.info("Host: After Effects major version " + v + ".");
+            }
+            return v;
+        },
+
+        /** Ensure a project exists and apply color management + expression engine (idempotent). */
+        bootstrapProject: function () {
+            if (!app.project) { app.newProject(); }
+            var cfg = SR.config.project;
+            SR.Guard.attempt("set bitsPerChannel", function () { app.project.bitsPerChannel = cfg.bitsPerChannel; });
+            SR.Guard.attempt("set linearizeWorkingSpace", function () { app.project.linearizeWorkingSpace = cfg.linearize; });
+            SR.Guard.attempt("set expressionEngine", function () { app.project.expressionEngine = cfg.expressionEngine; });
+            SR.Logger.info("Project bootstrapped: " + cfg.bitsPerChannel + "bpc, linearized=" + cfg.linearize +
+                           ", engine=" + cfg.expressionEngine + ".");
+            return app.project;
+        },
+
+        /** True if a real project is open. */
+        assertProject: function () {
+            if (!app.project) { throw new Error("[SR] no project available"); }
+            return true;
+        },
+
+        /** Wrap a build function in a single undo group with top-level error capture. */
+        runInUndoGroup: function (label, fn) {
+            app.beginUndoGroup(label);
+            try {
+                return fn();
+            } catch (e) {
+                SR.Logger.error("FATAL: " + e.toString() + (e.line ? (" (line " + e.line + ")") : ""));
+                throw e;
+            } finally {
+                app.endUndoGroup();
+            }
+        }
+    };
+
+    SR.Env = Env;
+    SR.registerModule("core/env");
+})($.global.SR);
